@@ -1,12 +1,7 @@
-build:
-  build_kit:
-    name: python3
-    version: latest
-    platforms: [linux/arm64]
-  dev_build:
-    build_kit:
-      name: python3
-      platforms: [linux/arm64]
+build_kit:
+  name: python3
+  version: latest
+  platforms: [linux/arm64]
 peripheral_requirements:
   - name: CAMERA
     peripheral_type: Camera
