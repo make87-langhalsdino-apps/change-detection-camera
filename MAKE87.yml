@@ -1,6 +1,15 @@
-build_kit:
-  name: python3
-  version: latest
+build:
+  build_kit:
+    name: python3
+    version: latest
+    platforms: [linux/arm64]
+  dev_build:
+    build_kit:
+      name: python3
+      platforms: [linux/arm64]
+peripheral_requirements:
+  - name: CAMERA
+    peripheral_type: Camera
 outbound_topics:
-  - name: change_detector/images
+  - name: DETECTED_CHANGED_IMAGE
     message_type: make87_messages.image.compressed.image_jpeg

@@ -13,6 +13,7 @@ from typing import Final, Tuple
 import cv2
 import numpy as np
 from picamera2 import Picamera2
+import make87
 from make87.topics import get_publisher
 from make87_messages.image.compressed.image_jpeg import ImageJPEG
 
@@ -80,6 +81,7 @@ def encode_jpeg(frame: np.ndarray) -> bytes | None:
 
 def main() -> None:
     """Run the motion-triggered publisher."""
+    make87.initialize()
     camera = init_camera(RESOLUTION)
     subtractor = cv2.createBackgroundSubtractorMOG2()
     publisher = get_publisher(name=TOPIC_NAME, message_type=ImageJPEG)
