@@ -22,7 +22,7 @@ RESOLUTION: Final[Tuple[int, int]] = (640, 480)
 FRAME_RATE_LIMIT_S: Final[float] = 0.2
 MOTION_PIXEL_THRESHOLD: Final[int] = 1_000
 PUBLISH_INTERVAL_S: Final[float] = 1.0
-TOPIC_NAME: Final[str] = "change_detector/images"
+TOPIC_NAME: Final[str] = "DETECTED_CHANGED_IMAGE"
 
 
 # Helpers ----------------------------------------------------------------------
