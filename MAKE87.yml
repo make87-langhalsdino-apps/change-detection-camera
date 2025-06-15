@@ -2,7 +2,7 @@ build_kit:
   name: python3
   version: latest
   target_architectures: 
-    - amd64
+    - arm64
 peripheral_requirements:
   - name: CAMERA
     peripheral_type: Camera
