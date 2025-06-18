@@ -1,60 +1,42 @@
-FROM ghcr.io/make87/debian:bookworm
+FROM debian:bookworm-slim
+
+ARG VIRTUAL_ENV=/make87/venv
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      gnupg
+
+RUN echo "deb http://archive.raspberrypi.org/debian/ bookworm main" > /etc/apt/sources.list.d/raspi.list \
+    && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 82B129927FA3303E
 
 
 RUN apt-get update \
     && apt-get install --no-install-suggests --no-install-recommends -y \
         build-essential \
-        python3 \
-        python3-venv \
-        python3-dev \
         python3-pip \
-        # --------------------------------------------------------------
-        # Runtime libraries required by opencv-python-headless wheels
-        # --------------------------------------------------------------
-        libjpeg-dev \
-        libpng-dev \
-        libtiff5 \
-        libopenjp2-7 \
-        libatlas3-base \
-        # --------------------------------------------------------------
-        # Picamera2 runs on top of libcamera; these packages are present
-        # in Debian 12 and are harmless on non-Pi hardware.
-        # --------------------------------------------------------------
+        python3 \
+        libpython3-dev \
+        python3-venv \
+        python3-picamera2 \
+        libcamera-apps \
+        libcamera-dev \
+        libcamera-tools \
+        libcap-dev \
         python3-libcamera \
-        libcamera-dev; \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-############################################################################################################
+RUN python3 -m venv ${VIRTUAL_ENV} --system-site-packages \
+    && ${VIRTUAL_ENV}/bin/pip install -U \
+      pip \
+      setuptools \
+      wheel
 
-# Install SSH Server
+WORKDIR /app
 
-############################################################################################################
+COPY . .
 
-RUN apt-get update \
-    && apt-get install --no-install-suggests --no-install-recommends -y  \
-      openssh-server \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN ${VIRTUAL_ENV}/bin/python3 -m pip install -U pip \
+    && ${VIRTUAL_ENV}/bin/python3 -m pip install .
 
-# SSH setup
-RUN mkdir -p /var/run/sshd \
-    && mkdir -p /root/.ssh \
-    && chmod 700 /root/.ssh
-
-# Ensure SSH uses the authorized_keys file for authentication
-RUN echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config \
-    && echo "PasswordAuthentication no" >> /etc/ssh/sshd_config \
-    && echo "PermitRootLogin yes" >> /etc/ssh/sshd_config \
-    && echo "ChallengeResponseAuthentication no" >> /etc/ssh/sshd_config \
-    && echo "UsePAM no" >> /etc/ssh/sshd_config \
-    && echo "AuthorizedKeysFile /root/.ssh/authorized_keys" >> /etc/ssh/sshd_config
-
-EXPOSE 22
-
-# Copy the startup script
-COPY entrypoint-dev.sh /entrypoint-dev.sh
-RUN chmod +x /entrypoint-dev.sh
-
-# Set the default command to execute the startup script
-ENTRYPOINT ["/entrypoint-dev.sh", "/home/state/code"]
+ENTRYPOINT ["/make87/venv/bin/python3", "-m", "app.main"]
