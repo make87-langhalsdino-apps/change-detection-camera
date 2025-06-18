@@ -123,10 +123,7 @@ source /home/state/venv/bin/activate
 
 # check RUN_MODE env var if its ide, ssh or run
 DEV_RUN_MODE=${DEV_RUN_MODE:-ide}
-if [ "$DEV_RUN_MODE" = "ide" ]; then
-    # Start OpenVSCode Server
-    "$OPENVSCODE_SERVER_ROOT/bin/openvscode-server" --host=0.0.0.0 --port=3000 --without-connection-token --default-folder "$1"
-elif [ "$DEV_RUN_MODE" = "ssh" ]; then
+if [ "$DEV_RUN_MODE" = "ssh" ]; then
     # SSH server is already running. Keep the container running
     tail -f /dev/null
 else
