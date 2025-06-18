@@ -1,98 +1,89 @@
 from __future__ import annotations
-
-"""Motion-triggered image publisher for Make87.
-
-This module captures frames from a Raspberry Pi camera, detects motion using
-an adaptive background model, and publishes JPEG images on the
-``change_detector/images`` topic whenever motion is detected.
+"""
+Motion-triggered image publisher for Make87.
 """
 
+import logging
+import random
 import time
 from typing import Final, Tuple
 
 import cv2
 import numpy as np
 from picamera2 import Picamera2
-import make87
-from make87.topics import get_publisher
-from make87_messages.image.compressed.image_jpeg import ImageJPEG
 
-# Configuration ----------------------------------------------------------------
+import make87
+from make87.interfaces.zenoh import ZenohInterface
+from make87_messages.core.header_pb2 import Header
+from make87_messages.image.compressed.image_jpeg_pb2 import ImageJPEG
+
+# ------------------------------------------------------------------------------
+# Configuration
+# ------------------------------------------------------------------------------
 RESOLUTION: Final[Tuple[int, int]] = (640, 480)
 FRAME_RATE_LIMIT_S: Final[float] = 0.2
 MOTION_PIXEL_THRESHOLD: Final[int] = 1_000
 PUBLISH_INTERVAL_S: Final[float] = 1.0
 TOPIC_NAME: Final[str] = "DETECTED_CHANGED_IMAGE"
 
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger("motion_publisher")
 
-# Helpers ----------------------------------------------------------------------
 
+# ------------------------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------------------------
 def init_camera(resolution: tuple[int, int]) -> Picamera2:
-    """Configure and start the PiCamera.
-
-    Args:
-        resolution: Desired frame size as ``(width, height)`` in pixels.
-
-    Returns:
-        A ready-to-use :class:`Picamera2` instance.
-    """
-    camera = Picamera2()
-    camera_config = camera.create_video_configuration(main={"size": resolution})
-    camera.configure(camera_config)
-    camera.start()
-    return camera
+    cam = Picamera2()
+    cam_cfg = cam.create_video_configuration(main={"size": resolution})
+    cam.configure(cam_cfg)
+    cam.start()
+    return cam
 
 
 def motion_mask(frame: np.ndarray, subtractor: cv2.BackgroundSubtractor) -> np.ndarray:
-    """Compute a foreground mask highlighting motion areas.
-
-    Args:
-        frame: Current video frame (BGR).
-        subtractor: Background-subtractor instance.
-
-    Returns:
-        Binary mask where moving pixels are non-zero.
-    """
     return subtractor.apply(frame)
 
 
 def has_motion(mask: np.ndarray, threshold: int) -> bool:
-    """Return ``True`` when *mask* contains significant motion.
-
-    Args:
-        mask: Foreground mask returned from :func:`motion_mask`.
-        threshold: Minimum number of changed pixels.
-    """
     return int(cv2.countNonZero(mask)) > threshold
 
 
-def encode_jpeg(frame: np.ndarray) -> bytes | None:
-    """Encode *frame* to JPEG.
+def encode_jpeg(frame: np.ndarray, quality: int = 90) -> bytes | None:
+    """Encode frame and return raw JPEG bytes (or ``None`` on failure)."""
+    ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    return buf.tobytes() if ok else None
 
-    Args:
-        frame: Image to encode.
+def publish(jpeg, publisher):
+    header = Header(entity_path="/camera", reference_id=random.randint(0, 9999999999))
+    header.timestamp.GetCurrentTime()
+    msg = ImageJPEG(header=header, data=jpeg.tobytes())
+    message_encoded = make87.encodings.ProtobufEncoder(message_type=ImageJPEG).encode(msg)
+    publisher.put(message_encoded)
+    log.debug("Published full frame.")
 
-    Returns:
-        JPEG bytes on success; ``None`` otherwise.
-    """
-    success, buffer = cv2.imencode(".jpg", frame)
-    return buffer.tobytes() if success else None
-
-
+# ------------------------------------------------------------------------------
+# Main
+# ------------------------------------------------------------------------------
 def main() -> None:
-    """Run the motion-triggered publisher."""
-    make87.initialize()
     camera = init_camera(RESOLUTION)
     subtractor = cv2.createBackgroundSubtractorMOG2()
-    publisher = get_publisher(name=TOPIC_NAME, message_type=ImageJPEG)
+    config = make87.config.load_config_from_env()
+    zenoh_interface = ZenohInterface(name="zenoh-client", make87_config=config)
+    
+    publisher = zenoh_interface.get_publisher(
+            name="FULL_FRAME"
+    )
 
-    last_publish: float = 0.0
+
+    last_publish = 0.0
+    log.info("Started motion detector/publisher.")
 
     try:
         while True:
             frame = camera.capture_array()
-            if frame is None:  # Camera hiccup; skip this iteration.
-                continue
+            if frame is None:
+                continue  # camera hiccup
 
             mask = motion_mask(frame, subtractor)
             if not has_motion(mask, MOTION_PIXEL_THRESHOLD):
@@ -106,13 +97,17 @@ def main() -> None:
 
             encoded = encode_jpeg(frame)
             if encoded is None:
+                log.warning("JPEG encode failed – skipping frame.")
                 continue
 
-            publisher.publish(ImageJPEG(data=encoded))
+            publish(ImageJPEG(data=encoded), publisher)
             last_publish = now
+            log.debug("Published motion frame.")
             time.sleep(FRAME_RATE_LIMIT_S)
+
     finally:
         camera.stop()
+        log.info("Camera stopped.")
 
 
 if __name__ == "__main__":
