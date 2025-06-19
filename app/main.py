@@ -1,6 +1,6 @@
 from __future__ import annotations
 """
-Motion-triggered image publisher for Make87.
+Motion-triggered image publisher for Make87. 
 """
 
 import logging
