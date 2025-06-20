@@ -72,7 +72,7 @@ def main() -> None:
     zenoh_interface = ZenohInterface(name="zenoh-client", make87_config=config)
     
     publisher = zenoh_interface.get_publisher(
-            name="FULL_FRAME"
+            name=TOPIC_NAME
     )
 
 
