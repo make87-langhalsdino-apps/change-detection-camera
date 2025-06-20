@@ -17,7 +17,8 @@ interfaces:
       target_port: 7447
     publishers:
       - name: DETECTED_CHANGED_IMAGE
-        message_type: make87_messages.image.compressed.ImageJPEG
+        spec:
+          make87_message: make87_messages.image.compressed.ImageJPEG
         encoding: proto
     
 config:
