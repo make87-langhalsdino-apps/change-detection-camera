@@ -15,7 +15,7 @@ interfaces:
       name: zenoh-client
       protocol: TCP
       target_port: 7447
-    publisher:
+    publishers:
       - name: DETECTED_CHANGED_IMAGE
         message_type: make87_messages.image.compressed.ImageJPEG
         encoding: proto
