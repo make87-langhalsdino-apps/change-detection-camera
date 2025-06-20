@@ -1,4 +1,4 @@
-FROM ghcr.io/make87/python3-dev:latest
+FROM debian:bookworm-slim
 
 ## Custom Add-ons
 
