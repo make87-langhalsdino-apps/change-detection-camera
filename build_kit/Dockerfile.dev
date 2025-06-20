@@ -33,12 +33,12 @@ RUN python3 -m venv ${VIRTUAL_ENV} --system-site-packages \
       wheel
 
 WORKDIR /app
+RUN echo "hi"
 
 COPY . .
 
 RUN ${VIRTUAL_ENV}/bin/python3 -m pip install -U pip \
     && ${VIRTUAL_ENV}/bin/python3 -m pip install .
 
-RUN echo "hi"
 
 ENTRYPOINT ["/make87/venv/bin/python3", "-m", "app.main"]
