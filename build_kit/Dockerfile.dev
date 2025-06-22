@@ -8,7 +8,6 @@ RUN echo "deb http://archive.raspberrypi.org/debian/ bookworm main" > /etc/apt/s
     && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 82B129927FA3303E
 
 RUN apt-get update \
-#    && apt-get -y upgrade \  # DO WE NEED THIS?
     && apt-get install -y --no-install-recommends \
         python3-picamera2 \
         libcamera-apps \
@@ -20,4 +19,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
+
+ENV DEV_RUN_MODE='ssh'
+
 ENTRYPOINT [ "./entrypoint-dev.sh" ]
