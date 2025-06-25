@@ -20,6 +20,4 @@ RUN apt-get update \
 
 COPY . .
 
-ENV DEV_RUN_MODE='ssh'
-
 ENTRYPOINT [ "./entrypoint-dev.sh" ]
